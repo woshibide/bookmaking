@@ -1,5 +1,7 @@
 # ✨🫂✨
 this is a collection of scripts that come in handy when bookmaking 
+they are not really user friendly, sorry not sorry
+
 
 ## image_combo.pde
 is a (Processing)[https://processing.org] sketch that comes in handy when you are

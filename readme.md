@@ -1,33 +1,33 @@
-# ✨🫂✨
-this is a collection of scripts that come in handy when bookmaking 
-they are not really user friendly, sorry not sorry
+# ✨🫂✨ bookmaking aid ✨🫂✨ 
 
+This is a collection of scripts that come in handy when bookmaking. They are not really user-friendly (sorry, not sorry), but they prove very useful in certain cases.
 
-## image_combo.pde
-is a (Processing)[https://processing.org] sketch that comes in handy when you are
-making a photobook. all it does is it shows one image against
-the other, making it easier to see which images work together
+ 
+## Overview
 
-## find_doppelgangers.py
-reports reoccurences of images, that are placed in indesign file
+### `image_combo.pde`
+A [Processing](https://processing.org) sketch that assists in photobook creation. It displays one image against another, making it easier to see which images work well together on a spread.
 
-## include_pages.py
-used for indexing, it adds page number to the information entry
+### `find_doppelgangers.py`
+Identifies recurring images that are placed within an InDesign file, relies on report file.
 
-## move_reported_images.py
-moves away reported from indesign images into a folder
+### `include_pages.py`
+Used for indexing. Adds page numbers to the information entries, relies on report file.
 
-## sign_calc.py
-calculates which page numbers will be wrapping signatures
+### `move_reported_images.py`
+Moves images flagged in the InDesign file into a separate folder, relies on report file.
 
-## spine_manager.py
-applies images onto the spine of a book with exposed binding
+### `sign_calc.py`
+Calculates which spreads will be wrapping signatures, useful when working with book spine or graphics.
 
-## transcriber3000
-takes audio on input and outputs text, works with any length audio
+### `spine_manager.py`
+Applies graphics onto the spine of already imposed book, a tool to put image/text on the spine of exposed binding book.
 
-## meaningfy
-takes raw text on input and makes sense out of it, outputs grammatically correct latex document ready for typesetting
+### `transcriber3000`
+Takes audio as input and outputs text. Works with audio of any length. Very likely to be incoherent. Relies on OpenAI API token
+
+### `meaningfy`
+Processes raw text and structures it into a grammatically correct LaTeX document, ready for typesetting. Relies on OpenAI API Token
 
 
 

@@ -1,11 +1,10 @@
 """
 this script puts images onto the pdf
-expects on input imposed for printing pdf
-outputs same pdf, but with images being put 
-on the "spine"
+expects on input imposed for printing pdf and sliced images
+outputs same pdf, but with images being put on the book spine
 
+TODO: image splicer
 TODO: instead of hardcoding 8 value of signature size to be provided
-TODO: image splitter
 
 """
 

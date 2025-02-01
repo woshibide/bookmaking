@@ -1,6 +1,6 @@
 """
 
-this is to move found images into a different directory,
+this is to move reported images into a different directory,
 provided that report.txt contains same names as images
 
 script to make report is here

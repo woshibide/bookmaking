@@ -2,6 +2,7 @@
 
 This is a collection of scripts that come in handy when bookmaking. They are not really user-friendly (sorry, not sorry), but they prove very useful in certain cases.
 
+>CONTRIBUTORS ARE VERY MUCH WELCOME
  
 ## Overview
 
@@ -29,5 +30,9 @@ Takes audio as input and outputs text. Works with audio of any length. Very like
 ### `meaningfy`
 Processes raw text and structures it into a grammatically correct LaTeX document, ready for typesetting. Relies on OpenAI API Token
 
+### `scroll_color_picker.pde`
+Great for exploring colors intuitively. Scroll over one of the three regions of the screen to change H || S || B vaues of the current background color.
 
+### `ID_twoTabs.jsx`
+InDesign script that inserts two tabs in the highlighted piece of text. First tab goes to the first line, right after the first character, the second tab goes to the beginning of the second line. The outcome somewhat resembles *illuminated initial* from medieval books. Used it for typesetting an interview 
 

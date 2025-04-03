@@ -2,92 +2,81 @@
 float currentH = 180; // starting hue (0-360)
 float currentS = 50;  // starting saturation (0-100)
 float currentB = 90;  // starting brightness (0-100)
+boolean showCopied = false;
+int copiedTime = 0;
 
 void setup() {
   fullScreen();
-  // Use HSB mode with the desired ranges for hue, saturation, brightness.
   colorMode(HSB, 360, 100, 100);
-  // Use smooth text and centered alignment for the influence letters.
   textAlign(CENTER, CENTER);
 }
 
 void draw() {
-  // Draw the background using the current HSB values.
   background(currentH, currentS, currentB);
   
-  // Draw vertical lines to visually split the screen into 3 equal parts.
-  // stroke(0, 0, 100); // white stroke for contrast
-  // strokeWeight(2);
-  // line(width/3, 0, width/3, height);
-  // line(2 * width/3, 0, 2 * width/3, height);
-  
-  // Draw the influence labels ("H", "S", "B") in the center of each container using DIFFERENCE mode.
+  // Draw labels
   pushStyle();
   blendMode(DIFFERENCE);
   textSize(36);
-  // No need to set fill since the difference mode inverts the underlying colors.
-  text("H", width/6 , height - 40);
+  text("H", width/6, height - 40);
   text("S", width/2, height - 40);
   text("B", 5 * width/6, height - 40);
   popStyle();
   
-  // Prepare info string to display current HSB, plus computed RGB and HEX.
-  String info = "HSB: " 
-                + nf(currentH, 0, 1) + ", " 
-                + nf(currentS, 0, 1) + ", " 
-                + nf(currentB, 0, 1);
-                
-  // Get the current background color as a color variable.
+  // Color conversion
   color c = color(currentH, currentS, currentB);
-  // Extract RGB components (they are automatically scaled to 0-255).
-  int r = int(red(c));
-  int g = int(green(c));
-  int b = int(blue(c));
-  info += "\nRGB: " + r + ", " + g + ", " + b;
-  // Convert RGB to HEX string.
-  String hex = String.format("#%02X%02X%02X", r, g, b);
-  info += "\nHEX: " + hex;
+  int r = round(red(c));    // FIX: Use rounding instead of truncation
+  int g = round(green(c));  // for accurate RGB values
+  int b = round(blue(c));
   
-  // Draw the info text in the top left corner using DIFFERENCE mode.
+  // Info text
+  String info = "HSB: " 
+    + nf(currentH, 0, 1) + ", " 
+    + nf(currentS, 0, 1) + ", " 
+    + nf(currentB, 0, 1)
+    + "\nRGB: " + r + ", " + g + ", " + b
+    + "\nHEX: " + String.format("#%02X%02X%02X", r, g, b);
+
   pushStyle();
   blendMode(DIFFERENCE);
   textSize(16);
   textAlign(LEFT, TOP);
   text(info, 20, 20);
+  
+  // Copy confirmation
+  if (showCopied && millis() - copiedTime < 2000) {
+    textSize(12);
+    text("copied HEX.", 20, height - 60);
+  } else {
+    showCopied = false;
+  }
   popStyle();
 }
 
 void mouseWheel(MouseEvent event) {
-  float e = event.getCount(); // scroll direction (typically ±1)
-  
-  // Determine which third of the screen the mouse is in.
+  float e = event.getCount();
   if (mouseX < width/3) {
-    // Left third controls Hue
-    currentH = constrain(currentH + e, 0, 360);
-  } else if (mouseX < 2 * width/3) {
-    // Middle third controls Saturation
-    currentS = constrain(currentS + e, 0, 100);
+    currentH = constrain(currentH - e, 0, 360);
+  } else if (mouseX < 2*width/3) {
+    currentS = constrain(currentS - e, 0, 100);
   } else {
-    // Right third controls Brightness
-    currentB = constrain(currentB + e, 0, 100);
+    currentB = constrain(currentB - e, 0, 100);
   }
 }
 
 void mousePressed() {
-  // If left mouse button is clicked, copy the HEX color to the clipboard.
   if (mouseButton == LEFT) {
-    // Get the current background color.
     color c = color(currentH, currentS, currentB);
-    int r = int(red(c));
-    int g = int(green(c));
-    int b = int(blue(c));
-    String hex = String.format("#%02X%02X%02X", r, g, b);
+    String hex = String.format("#%02X%02X%02X", 
+      round(red(c)), round(green(c)), round(blue(c)));
     copyToClipboard(hex);
+    showCopied = true;
+    copiedTime = millis();
   }
 }
 
-// Uses Java's AWT library to copy text to the system clipboard.
 void copyToClipboard(String text) {
-  java.awt.datatransfer.StringSelection selection = new java.awt.datatransfer.StringSelection(text);
+  java.awt.datatransfer.StringSelection selection = 
+    new java.awt.datatransfer.StringSelection(text);
   java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
 }

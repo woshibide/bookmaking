@@ -8,3 +8,4 @@
 *.mp4
 *.env
 .env
+.vscode

@@ -1,17 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <title>Radial Dendrogram</title>
-  <link rel="stylesheet" href="styles.css">
-  <!-- Load D3.js from CDN -->
+  <title>DENDROGRAMMER</title>
+  <link rel="stylesheet" href="./styles.css">
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
-<body>
 
+<body>
+  <div id="controlPannel-wrapper">
+    <div id="controlPanel">
+      <h1><marquee scrollamount="3" id="csvFileName">for_Rewire_design_team-data_set.csv</marquee></h1>
+      <div class="button-group">
+        <button id="exportBtn">EXPORT SVG</button>
+        <button id="toggleBtn">TOGGLE LAYOUT</button>
+        <button id="pathStyleBtn">SMOOTH PATHS</button>
+      </div>
+      <div class="control-group">
+        <h2>LAYOUT</h2>
+        <label>RADIAL SCALE: <span class="current-value" id="radialScale_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="radialScale_min" value="0.1" step="0.1">
+          <input type="range" id="radialScale" min="0.1" max="1" step="0.1">
+          <input type="number" class="clamp-input" id="radialScale_max" value="1" step="0.1">
+        </div>
+        <label>CLUSTER HEIGHT: <span class="current-value" id="clusterHeight_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="clusterHeight_min" value="0.5" step="0.1">
+          <input type="range" id="clusterHeight" min="0.5" max="3" step="0.1">
+          <input type="number" class="clamp-input" id="clusterHeight_max" value="3" step="0.1">
+        </div>
+        <label>CLUSTER WIDTH: <span class="current-value" id="clusterWidth_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="clusterWidth_min" value="0.1" step="0.1">
+          <input type="range" id="clusterWidth" min="0.1" max="1" step="0.1">
+          <input type="number" class="clamp-input" id="clusterWidth_max" value="1" step="0.1">
+        </div>
+      </div>
+      <div class="control-group">
+        <h2>NODES</h2>
+        <label>NODE SIZE: <span class="current-value" id="nodeRadius_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="nodeRadius_min" value="1" step="1">
+          <input type="range" id="nodeRadius" min="1" max="10" step="1">
+          <input type="number" class="clamp-input" id="nodeRadius_max" value="10" step="1">
+        </div>
+        <label>LABEL OFFSET: <span class="current-value" id="labelOffset_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="labelOffset_min" value="1" step="1">
+          <input type="range" id="labelOffset" min="1" max="20" step="1">
+          <input type="number" class="clamp-input" id="labelOffset_max" value="20" step="1">
+        </div>
+      </div>
+      <div class="control-group">
+        <h2>COLORS</h2>
+        <i>doesnt work lol<br></i>
+        <label>PARENT NODE: <span class="current-value" id="nodeParentColor_value"></span></label>
+        <input type="color" id="nodeParentColor">
+        <label>LEAF NODE: <span class="current-value" id="nodeLeafColor_value"></span></label>
+        <input type="color" id="nodeLeafColor">
+        <label>LINK: <span class="current-value" id="linkColor_value"></span></label>
+        <input type="color" id="linkColor">
+        <label>LINK OPACITY: <span class="current-value" id="linkOpacity_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="linkOpacity_min" value="0" step="0.1">
+          <input type="range" id="linkOpacity" min="0" max="1" step="0.1">
+          <input type="number" class="clamp-input" id="linkOpacity_max" value="1" step="0.1">
+        </div>
+      </div>
+      <div class="control-group">
+        <h2>TYPOGRAPHY</h2>
+        <i>also doesnt work<br></i>
+        <label>PARENT LABEL SIZE: <span class="current-value" id="fontSizeParent_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="fontSizeParent_min" value="8" step="1">
+          <input type="range" id="fontSizeParent" min="8" max="24" step="1" value="14">
+          <input type="number" class="clamp-input" id="fontSizeParent_max" value="24" step="1">
+        </div>
+        <label>LEAF LABEL SIZE: <span class="current-value" id="fontSizeLeaf_value"></span></label>
+        <div class="range-control">
+          <input type="number" class="clamp-input" id="fontSizeLeaf_min" value="8" step="1">
+          <input type="range" id="fontSizeLeaf" min="8" max="24" step="1" value="12">
+          <input type="number" class="clamp-input" id="fontSizeLeaf_max" value="24" step="1">
+        </div>
+      </div>
+      <button id="resetBtn">RESET VALUES</button>
+      <div class="button-group">
+        <button class="externalBtn">CONTRIBUTE</button>
+        <button class="externalBtn">DONATE</button>
+      </div>
+    </div>
+  </div>
   <div id="chart"></div>
-  <button id="exportBtn">Export as SVG</button>
-  
-  <script src="scripts.js"></script>
+  <script src="./scripts.js" defer></script>
 </body>
+
 </html>

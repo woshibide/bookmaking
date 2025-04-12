@@ -4,12 +4,14 @@
 # configuration
 max_size=256000            # desired max file size in bytes
 delete_originals=true      # set to 'false' to keep original images
-recursive=false            # set to 'true' to process subdirectories recursively
+recursive=true            # set to 'true' to process subdirectories recursively
+image_extensions="png heic gif bmp tiff tif jpeg jpg" # case insensentive
 
-# function to process a single image
+# process a single image
 process_image() {
   img="$1"
   if [ -f "$img" ]; then
+    echo "compressing: $img"  # log the file being processed
     quality=90
     output="${img%.*}.jpg"
     while [ $quality -ge 10 ]; do
@@ -27,17 +29,41 @@ process_image() {
   fi
 }
 
+# set of supported image extensions
 if [ "$recursive" = true ]; then
-  # process images in current directory and subdirectories
-  find . -type f \( -iname "*.png" -o -iname "*.heic" -o -iname "*.gif" -o -iname "*.bmp" \
-    -o -iname "*.tiff" -o -iname "*.tif" -o -iname "*.jpeg" -o -iname "*.jpg" \) | while read -r img; do
+
+  # build the find command dynamically
+  find_cmd="find . -type f \("
+  first=true
+  for ext in $image_extensions; do
+    if [ "$first" = true ]; then
+      find_cmd="$find_cmd -iname \"*.$ext\""
+      first=false
+    else
+      find_cmd="$find_cmd -o -iname \"*.$ext\""
+    fi
+  done
+  find_cmd="$find_cmd \)"
+
+  # execute the find command and process each image
+  eval "$find_cmd" | while read -r img; do
     process_image "$img"
   done
 else
   # process only images in current directory
+  echo "processing images in: $(pwd)"
   shopt -s nullglob
-  for img in *.{png,heic,gif,bmp,tiff,tif,jpeg,PNG,jpg,HEIC,GIF,BMP,TIFF,TIF,JPEG,JPG}; do
+  shopt -s nocaseglob # make pattern matching case-insensitive
+
+  # create pattern with all extensions
+  pattern="*.{"$(echo "$image_extensions" | tr ' ' ',')"}}"
+
+  # process matching files
+  for img in $pattern; do
     process_image "$img"
   done
+
+  # reset shell options
   shopt -u nullglob
+  shopt -u nocaseglob
 fi

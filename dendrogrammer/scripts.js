@@ -4,11 +4,12 @@ const pathToCSV = "for_Rewire_design_team-data_set.csv";
 
 const CONFIG = {
     colors: {
-        nodeParent: "#555",
-        nodeLeaf: "#999",
-        link: "#555",
+        nodeParent: "#ff0035",
+        nodeLeaf: "#ff0035",
+        link: "#ff0035",
         linkOpacity: 0.2,
-        countBar: "#ff0035"  // Color for the count bars
+        countBar: "#ff0035",
+        fontColor: "#ff0035",
     },
     zoom: {
         min: 0.1,
@@ -18,25 +19,50 @@ const CONFIG = {
         radialRadiusScale: 0.5,     // for radial view
         clusterHeightScale: 1.8,    // for cluster view
         clusterWidthScale: 0.3,     // for cluster view
+        
         nodeRadius: 4,
         labelOffset: 6,
-        useSmoothPaths: true,       // for path style (smooth vs straight)
-        countBarHeight: 3,          // height of count bars 
-        countBarMaxWidth: 50        // maximum width for count bars
+        pathStyle: "elbow",        // smooth / elbow / straight
+        
+        countBarHeight: 3,         // height of count bars 
+        countBarMaxWidth: 50,      // maximum width for count bars
+        countBarScale: 1,          // scaling factor for count bars
+        countBarExponent: 1        // exponent for non-linear mapping (1 = linear)
     },
     fontSize: {
-        parent: 14,  // no px
-        leaf: 12     // no px
+        parent: 14,  // px are added after
+        leaf: 12     // px are added after
+    },
+    links: {
+        minWidth: 1,
+        maxWidth: 40
     }
 };
 
-// Store initial config at the top after CONFIG definition
+// used for resetting values
 const INITIAL_CONFIG = JSON.parse(JSON.stringify(CONFIG));
 
+// Define linkScale globally with default values
+let linkScale = d3.scaleLinear()
+    .domain([1, 100])
+    .range([CONFIG.links.minWidth, CONFIG.links.maxWidth]);
+
+// Define getLinkWidth as a global function
+const getLinkWidth = d => linkScale(d.target.value);
+
+/**
+ * global debug logging function - only outputs when debug mode is enabled
+ * @param {...any} args - arguments to log to console
+ */
 function debug(...args) {
-    if (debugMode) console.log('[DEBUG]', ...args);
+    if (debugMode) console.log('>>>', ...args);
 }
 
+/**
+ * updates the displayed value for a control in the ui
+ * @param {string} id - id of the control element
+ * @param {any} value - value to display
+ */
 function updateValueDisplay(id, value) {
     const valueDisplay = document.getElementById(`${id}_value`);
     if (valueDisplay) {
@@ -44,6 +70,9 @@ function updateValueDisplay(id, value) {
     }
 }
 
+/**
+ * sets up all ui controls with initial values and event listeners
+ */
 function initializeControls() {
     // initial values for ranges
     debug("Initializing controls with colors:", {
@@ -62,6 +91,12 @@ function initializeControls() {
     document.getElementById('linkOpacity').value = CONFIG.colors.linkOpacity;
     document.getElementById('fontSizeParent').value = CONFIG.fontSize.parent;
     document.getElementById('fontSizeLeaf').value = CONFIG.fontSize.leaf;
+    document.getElementById('linkMinWidth').value = CONFIG.links.minWidth;
+    document.getElementById('linkMaxWidth').value = CONFIG.links.maxWidth;
+    document.getElementById('countBarHeight').value = CONFIG.layout.countBarHeight;
+    document.getElementById('countBarScale').value = CONFIG.layout.countBarScale;
+    document.getElementById('countBarExponent').value = CONFIG.layout.countBarExponent;
+
 
     // values for labels
     Object.entries({
@@ -75,7 +110,12 @@ function initializeControls() {
         linkColor: CONFIG.colors.link,
         linkOpacity: CONFIG.colors.linkOpacity,
         fontSizeParent: CONFIG.fontSize.parent,
-        fontSizeLeaf: CONFIG.fontSize.leaf
+        fontSizeLeaf: CONFIG.fontSize.leaf,
+        linkMinWidth: CONFIG.links.minWidth,
+        linkMaxWidth: CONFIG.links.maxWidth,
+        countBarHeight: CONFIG.layout.countBarHeight,
+        countBarScale: CONFIG.layout.countBarScale,
+        countBarExponent: CONFIG.layout.countBarExponent
     }).forEach(([id, value]) => updateValueDisplay(id, value));
 
     // listeners for all controls
@@ -117,6 +157,10 @@ function initializeControls() {
     });
 }
 
+/**
+ * event handler that updates configuration when controls change
+ * @param {Event} event - the dom event from the control
+ */
 function updateConfig(event) {
     const id = event.target.id;
     const value = event.target.type === 'range' ? parseFloat(event.target.value) : event.target.value;
@@ -154,15 +198,38 @@ function updateConfig(event) {
         case 'linkOpacity':
             CONFIG.colors.linkOpacity = value;
             break;
+        case 'linkMinWidth':
+            CONFIG.links.minWidth = value;
+            // update the scale range
+            linkScale.range([value, CONFIG.links.maxWidth]);
+            break;
+        case 'linkMaxWidth':
+            CONFIG.links.maxWidth = value;
+            // update the scale range
+            linkScale.range([CONFIG.links.minWidth, value]);
+            break;
         case 'fontSizeParent':
             CONFIG.fontSize.parent = value;
-            svg.selectAll(".inner-label")
-                .style("font-size", value + "px");
+            debug("Updating parent font size", value);
             break;
         case 'fontSizeLeaf':
             CONFIG.fontSize.leaf = value;
-            svg.selectAll(".leaf-label")
-                .style("font-size", value + "px");
+            debug("Updating leaf font size", value);
+            break;
+        case 'countBarHeight':
+            CONFIG.layout.countBarHeight = value;
+            // update height of bars
+            svg.selectAll("rect.count-bar")
+               .attr("height", value)
+               .attr("y", -value / 2);
+            break;
+        case 'countBarScale':
+            CONFIG.layout.countBarScale = value;
+            updateCountBars();
+            break;
+        case 'countBarExponent':
+            CONFIG.layout.countBarExponent = value;
+            updateCountBars();
             break;
     }
 
@@ -170,14 +237,71 @@ function updateConfig(event) {
     updateVisualization();
 }
 
+
+/**
+ * calculates the appropriate width for count bars based on data value
+ * @param {number} value - the data value to represent
+ * @param {number} maxValue - the maximum value in the dataset
+ * @returns {number} - calculated bar width
+ */
+function calculateBarWidth(value, maxValue) {
+    // apply non-linear mapping with exponent
+    const normalizedValue = Math.pow(value / maxValue, CONFIG.layout.countBarExponent);
+    // apply scaling factor
+    return normalizedValue * CONFIG.layout.countBarMaxWidth * CONFIG.layout.countBarScale;
+}
+
+/**
+ * updates all count bars when scale or exponent changes
+ */
+function updateCountBars() {
+    // get the current maximum value from data
+    const chart = d3.select("#chart");
+    const root = chart.datum();
+    if (!root) return;
+    
+    const maxValue = d3.max(root.leaves(), leaf => leaf.value || 0);
+    
+    // update all count bars
+    svg.selectAll("rect.count-bar")
+       .attr("width", d => calculateBarWidth(d.value, maxValue));
+}
+
+/**
+ * toggles between radial and horizontal layout modes
+ */
+function toggleLayout() {
+    // toggle between radial and horizontal layouts
+    isRadialLayout = !isRadialLayout;
+    
+    // update button text to reflect current layout
+    document.getElementById('toggleBtn').textContent = 
+        isRadialLayout ? 'RADIAL' : 'HORIZONTAL';
+    
+    debug('Layout changed to:', isRadialLayout ? 'radial' : 'horizontal');
+    
+    // reset the view to center
+    transform = d3.zoomIdentity.translate(width / 2, height / 2).scale(transform.k);
+    d3.select("#chart svg").call(zoom.transform, transform);
+    
+    updateVisualization();
+}
+
+/**
+ * resets all configuration values to initial state
+ */
 function resetConfig() {
     debug('Resetting configuration to initial state');
 
     // blink animation
     const controlPanel = document.getElementById('controlPanel');
+    const children = controlPanel.querySelectorAll('*');
     controlPanel.classList.add('blinking');
+    children.forEach(child => child.classList.add('blinking'));
+
     controlPanel.addEventListener('animationend', () => {
         controlPanel.classList.remove('blinking');
+        children.forEach(child => child.classList.remove('blinking'));
     }, { once: true });
 
     // reset CONFIG object
@@ -195,6 +319,12 @@ function resetConfig() {
     document.getElementById('linkOpacity').value = CONFIG.colors.linkOpacity;
     document.getElementById('fontSizeParent').value = CONFIG.fontSize.parent;
     document.getElementById('fontSizeLeaf').value = CONFIG.fontSize.leaf;
+    document.getElementById('linkMinWidth').value = CONFIG.links.minWidth;
+    document.getElementById('linkMaxWidth').value = CONFIG.links.maxWidth;
+    document.getElementById('countBarHeight').value = CONFIG.layout.countBarHeight;
+    document.getElementById('countBarScale').value = CONFIG.layout.countBarScale;
+    document.getElementById('countBarExponent').value = CONFIG.layout.countBarExponent;
+
 
     // update all value displays on reset
     Object.entries({
@@ -208,23 +338,31 @@ function resetConfig() {
         linkColor: CONFIG.colors.link,
         linkOpacity: CONFIG.colors.linkOpacity,
         fontSizeParent: CONFIG.fontSize.parent,
-        fontSizeLeaf: CONFIG.fontSize.leaf
+        fontSizeLeaf: CONFIG.fontSize.leaf,
+        linkMinWidth: CONFIG.links.minWidth,
+        linkMaxWidth: CONFIG.links.maxWidth,
+        countBarHeight: CONFIG.layout.countBarHeight,
+        countBarScale: CONFIG.layout.countBarScale,
+        countBarExponent: CONFIG.layout.countBarExponent
     }).forEach(([id, value]) => updateValueDisplay(id, value));
 
     debug('Configuration reset complete');
     updateVisualization();
 }
 
-let isRadialLayout = true;
-
-
-// update dimensions
+/**
+ * calculates dimensions based on window size and configuration
+ * @returns {Object} object containing width, height and radius values
+ */
 const calculateDimensions = () => ({
     width: window.innerWidth,
     height: window.innerHeight,
     radius: Math.min(window.innerWidth, window.innerHeight) * CONFIG.layout.radialRadiusScale
 });
 
+let isRadialLayout = true;
+
+// update dimensions
 let { width, height, radius } = calculateDimensions();
 
 // init transform state
@@ -251,11 +389,15 @@ const svg = d3.select("#chart")
 // initial transform
 d3.select("#chart svg").call(zoom.transform, transform);
 
+/**
+ * zoom event handler for svg pan and zoom
+ * @param {d3.ZoomEvent} event - the zoom event from d3
+ */
 function zoomed(event) {
-    debug('Zoom event:', {
-        transform: event.transform,
-        sourceEvent: event.sourceEvent?.type
-    });
+    // debug('Zoom event:', {
+    //     transform: event.transform,
+    //     sourceEvent: event.sourceEvent?.type
+    // });
 
     // Keep scale from previous transform when panning starts
     if (event.sourceEvent && event.sourceEvent.type === "mousemove") {
@@ -269,12 +411,16 @@ function zoomed(event) {
 const tree = d3.tree()
     .size([2 * Math.PI, radius]);
 
-// Smooth radial link path
+// smooth radial link path
 const radialLinkSmooth = d3.linkRadial()
     .angle(d => d.x)
     .radius(d => d.y);
 
-// Custom straight radial links
+/**
+ * generates a straight line path between two radial points
+ * @param {Object} d - the link data object containing source and target
+ * @returns {string} - svg path data string
+ */
 const radialLinkStraight = (d) => {
     const startAngle = d.source.x;
     const startRadius = d.source.y;
@@ -289,13 +435,69 @@ const radialLinkStraight = (d) => {
     return `M${x1},${y1}L${x2},${y2}`;
 };
 
+/**
+ * generates an elbow path between two radial points
+ * @param {Object} d - the link data object containing source and target
+ * @returns {string} - svg path data string
+ */
+const radialLinkElbow = (d) => {
+    const startAngle = d.source.x;
+    const startRadius = d.source.y;
+    const endAngle = d.target.x;
+    const endRadius = d.target.y;
+    
+    // calculate midpoint for the elbow
+    const midRadius = (startRadius + endRadius) / 2;
+    
+    // convert to cartesian coordinates
+    const x1 = startRadius * Math.cos(startAngle - Math.PI/2);
+    const y1 = startRadius * Math.sin(startAngle - Math.PI/2);
+    
+    // mid point (same angle as start, but at mid radius)
+    const xMid = midRadius * Math.cos(startAngle - Math.PI/2);
+    const yMid = midRadius * Math.sin(startAngle - Math.PI/2);
+    
+    // mid point (same angle as end, but at mid radius)
+    const xMid2 = midRadius * Math.cos(endAngle - Math.PI/2);
+    const yMid2 = midRadius * Math.sin(endAngle - Math.PI/2);
+    
+    // end point
+    const x2 = endRadius * Math.cos(endAngle - Math.PI/2);
+    const y2 = endRadius * Math.sin(endAngle - Math.PI/2);
+    
+    // create path with elbow points
+    return `M${x1},${y1}L${xMid},
+            ${yMid}A${midRadius},
+            ${midRadius} 0 0,
+            ${startAngle < endAngle ? 1 : 0} ${xMid2},
+            ${yMid2}L${x2},${y2}`;
+};
+
 // Horizontal link generators
 const horizontalLinkSmooth = d3.linkHorizontal()
     .x(d => d.y)
     .y(d => d.x);
 
+/**
+ * generates a straight line path between two horizontal points
+ * @param {Object} d - the link data object containing source and target
+ * @returns {string} - svg path data string
+ */
 const horizontalLinkStraight = (d) => {
     return `M${d.source.y},${d.source.x}L${d.target.y},${d.target.x}`;
+};
+
+/**
+ * generates an elbow path between two horizontal points
+ * @param {Object} d - the link data object containing source and target
+ * @returns {string} - svg path data string
+ */
+const horizontalLinkElbow = (d) => {
+    // the elbow is created by drawing a path with an intermediate point
+    return `M${d.source.y},${d.source.x}
+            H${(d.source.y + d.target.y) / 2}
+            V${d.target.x}
+            H${d.target.y}`;
 };
 
 // resize handler
@@ -328,7 +530,9 @@ window.addEventListener('resize', () => {
     }
 });
 
-
+/**
+ * updates the visualization based on current config and layout mode
+ */
 function updateVisualization() {
     const root = d3.select("#chart").datum();
     if (!root) {
@@ -338,7 +542,7 @@ function updateVisualization() {
 
     debug('Updating visualization', {
         layout: isRadialLayout ? 'radial' : 'horizontal',
-        pathStyle: CONFIG.layout.useSmoothPaths ? 'smooth' : 'straight',
+        pathStyle: CONFIG.layout.pathStyle,
         dimensions: { width, height, radius },
         transform: transform.toString()
     });
@@ -357,11 +561,16 @@ function updateVisualization() {
     svg.selectAll("path.link")
         .attr("d", d => {
             if (isRadialLayout) {
-                return CONFIG.layout.useSmoothPaths ? radialLinkSmooth(d) : radialLinkStraight(d);
+                if (CONFIG.layout.pathStyle === "smooth") return radialLinkSmooth(d);
+                if (CONFIG.layout.pathStyle === "elbow") return radialLinkElbow(d);
+                return radialLinkStraight(d);
             } else {
-                return CONFIG.layout.useSmoothPaths ? horizontalLinkSmooth(d) : horizontalLinkStraight(d);
+                if (CONFIG.layout.pathStyle === "smooth") return horizontalLinkSmooth(d);
+                if (CONFIG.layout.pathStyle === "elbow") return horizontalLinkElbow(d);
+                return horizontalLinkStraight(d);
             }
-        });
+        })
+        .attr("stroke-width", getLinkWidth); // update stroke
 
     // nodes position
     svg.selectAll("g.node")
@@ -369,27 +578,27 @@ function updateVisualization() {
             `rotate(${(d.x * 180 / Math.PI - 90)})translate(${d.y},0)` :
             `translate(${d.y},${d.x})`);
 
-    // Update count bars
+    // count bars
     svg.selectAll("rect.count-bar")
-        .attr("transform", d => {
-            if (isRadialLayout && d.x >= Math.PI) {
-                // Flip bars on the left side of radial layout
-                return "rotate(180)";
-            }
-            return "";
-        })
         .attr("x", d => {
             if (isRadialLayout && d.x >= Math.PI) {
-                // Left side of radial layout (flipped)
+                // radial
                 return -CONFIG.layout.nodeRadius;
             } else {
-                // Right side of radial or horizontal layout
+                // horizontal layout
                 return CONFIG.layout.nodeRadius;
             }
         });
 
-    // Update text rotation and position
+    // update text rotation and position
+    debug("Applying font sizes:", CONFIG.fontSize);
     svg.selectAll("text")
+        .style("font-size", d => {
+            const size = d.children ? 
+                CONFIG.fontSize.parent + "px" : 
+                CONFIG.fontSize.leaf + "px";
+            return size;
+        })
         .attr("transform", d => {
             if (isRadialLayout) {
                 return d.x >= Math.PI ? "rotate(180)" : null;
@@ -458,11 +667,13 @@ d3.csv(pathToCSV).then(data => {
         totalValue: root.value
     });
 
-    // link scale
-    // TODO: population size must be visualized 
-    const linkScale = d3.scaleLinear()
-        .domain([0, root.value])
-        .range([1, 80]); // min and max thickness of path links per layer
+    // Update the global linkScale with actual data values
+    const minLinkValue = d3.min(root.descendants().filter(d => d.value > 0), d => d.value);
+    const maxLinkValue = d3.max(root.descendants(), d => d.value);
+    
+    // Update the existing linkScale instead of creating a new one
+    linkScale.domain([minLinkValue || 1, maxLinkValue])
+             .range([CONFIG.links.minWidth, CONFIG.links.maxWidth]);
 
     tree(root);
 
@@ -481,7 +692,7 @@ d3.csv(pathToCSV).then(data => {
         .attr("fill", "none")
         .attr("stroke", CONFIG.colors.link)
         .attr("stroke-opacity", CONFIG.colors.linkOpacity)
-        .attr("stroke-width", d => linkScale(d.target.value));
+        .attr("stroke-width", getLinkWidth);
 
     // nodes
     const node = svg.selectAll("g.node")
@@ -500,35 +711,37 @@ d3.csv(pathToCSV).then(data => {
 
     node.append("text")
         .text(d => d.data.name)
+        .attr("class", d => d.children ? "inner-label" : "leaf-label") // Keep these classes
         .attr("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
-        .attr("x", d => d.x < Math.PI === !d.children ? CONFIG.layout.labelOffset : -CONFIG.layout.labelOffset) // how far away from the node
-        .attr("transform", d => d.x >= Math.PI ? "rotate(180)" : null) // after half a circle do a flip
-        .style("font-size", d => d.children ?
-            CONFIG.fontSize.parent + "px" :
-            CONFIG.fontSize.leaf + "px");      // styling
+        .attr("x", d => d.x < Math.PI === !d.children ? CONFIG.layout.labelOffset : -CONFIG.layout.labelOffset)
+        .attr("transform", d => d.x >= Math.PI ? "rotate(180)" : null)
+        .style("fill", CONFIG.colors.fontColor)
+        .style("font-size", d => {
+            const size = d.children ?
+                CONFIG.fontSize.parent + "px" :
+                CONFIG.fontSize.leaf + "px";
+            return size;
+        });
 
-    // Add count bars for leaf nodes (artists)
+    // count bars for leaf nodes
     const maxValue = d3.max(root.leaves(), leaf => leaf.value || 0);
 
-    node.filter(d => !d.children) // Only for leaf nodes
+    node.filter(d => !d.children) // only for leaf nodes
         .append("rect")
         .attr("class", "count-bar")
         .attr("x", d => CONFIG.layout.nodeRadius)
         .attr("y", -CONFIG.layout.countBarHeight / 2)
         .attr("height", CONFIG.layout.countBarHeight)
-        .attr("width", d => (d.value / maxValue) * CONFIG.layout.countBarMaxWidth)
+        .attr("width", d => calculateBarWidth(d.value, maxValue)) 
         .attr("fill", CONFIG.colors.countBar)
-        .attr("transform", d => {
-            if (isRadialLayout && d.x >= Math.PI) {
-                return "rotate(180)";
-            }
-            return "";
-        });
-
+        .attr("opacity", 0.5); // TODO: DONT HARDCODE
 }).catch(error => {
     debug('Error loading CSV:', error);
 });
 
+/**
+ * exports the current visualization as an svg file
+ */
 function exportSVG() {
     debug('Starting SVG export');
     const svgNode = document.querySelector("#chart svg");
@@ -565,28 +778,28 @@ document.getElementById("toggleBtn").addEventListener("click", toggleLayout);
 document.getElementById('resetBtn').addEventListener('click', resetConfig);
 document.getElementById("pathStyleBtn").addEventListener("click", togglePathStyle);
 
-function toggleLayout() {
-    isRadialLayout = !isRadialLayout;
-    debug('Layout toggled:', isRadialLayout ? 'radial' : 'horizontal');
+// add path style state
+const pathStyles = ["smooth", "elbow", "straight"];
+let currentPathStyleIndex = pathStyles.indexOf(CONFIG.layout.pathStyle); // as in the initialization
 
-    // Keep current scale when toggling
-    const currentScale = transform.k;
-    transform = d3.zoomIdentity.translate(width / 2, height / 2).scale(currentScale);
-
-    // Apply smooth transition
-    d3.select("#chart svg")
-        .transition()
-        .duration(300)
-        .call(zoom.transform, transform);
-
-    updateVisualization();
-}
-
+/**
+ * cycles through available path styles (smooth, elbow, straight)
+ */
 function togglePathStyle() {
-    CONFIG.layout.useSmoothPaths = !CONFIG.layout.useSmoothPaths;
+    // cycle through path styles
+    currentPathStyleIndex = (currentPathStyleIndex + 1) % pathStyles.length;
+    const style = pathStyles[currentPathStyleIndex];
+    
+    // update config
+    CONFIG.layout.pathStyle = style;
+    
+    // update button text
     document.getElementById('pathStyleBtn').textContent = 
-        CONFIG.layout.useSmoothPaths ? 'SMOOTH PATHS' : 'STRAIGHT PATHS';
+        style === "smooth" ? 'SMOOTH PATHS' : 
+        style === "elbow" ? 'ELBOW PATHS' : 'STRAIGHT PATHS';
+    
     updateVisualization();
 }
 
 window.addEventListener('load', initializeControls);
+

@@ -34,7 +34,7 @@ html, body {
     height: 100%;
     overflow: hidden;
     position: fixed;
-    font-family: monospace;
+    font-family: 'NectoMono', monospace;
     color: var(--the-color);
 }
 
@@ -52,12 +52,12 @@ body {
 }
 
 button {
+    width: 100%;
     background: var(--bg);
     color: var(--the-color);
     border: 1px solid var(--the-color);
     margin: 10px 0;
     padding: 10px;
-    font-family: monospace;
     cursor: pointer;
 }
 
@@ -67,52 +67,23 @@ button:hover {
 }
 
 
-.button-group{
+.button-group {
     display: flex;
     flex-direction: row;
     gap: 10px;
 }
+.button-group > * {
+    flex: 1;
+}
+
 
 .externalBtn{
-    width: 50%;
-    border: 1px solid var(--the-color);
     margin: 40px 0 10px 0;
-    padding: 10px;
-    font-family: monospace;
-    cursor: pointer;
-    z-index: 1000;
     background: var(--the-color);
     color: #fff;
 }
-.externalBtn:hover{
-    color: #000;
-}
 
-#exportBtn {
-    width: 50%;
-    background: var(--bg);
-    color: var(--the-color);
-    border: 1px solid var(--the-color);
-    margin: 10px 0;
-    padding: 10px;
-    font-family: monospace;
-    cursor: pointer;
-    z-index: 1000;
-}
 
-#exportBtn:hover {
-    background: var(--the-color);
-    color: #000;
-}
-
-.inner-label {
-    /* fill: #333; */
-    text-transform: uppercase;
-}
-
-.leaf-label {
-    /* fill: #666; */
-}
 #controlPanel-wrapper{
     width: 100%;
     height: 100%;
@@ -141,10 +112,6 @@ button:hover {
     margin-bottom: 0;
 }
 
-#controlPanel:hover {
-    background: none;
-}
-
 #controlPanel h1 {
     margin: 0 0 20px 0;
     padding: 10px;
@@ -155,7 +122,6 @@ button:hover {
 
 #controlPanel h2 {
     margin: 10px 0;
-    /* padding: 5px; */
     background: none;
 }
 
@@ -166,9 +132,6 @@ button:hover {
     background: none;
 }
 
-.control-group:hover {
-    background: none;
-}
 
 .range-control {
     display: grid;
@@ -183,7 +146,6 @@ button:hover {
     background: none;
     border: 1px solid var(--the-color);
     color: var(--the-color);
-    font-family:  monospace;
     padding: 2px;
 }
 
@@ -192,10 +154,14 @@ button:hover {
     justify-content: space-between; */
     align-items: start;
     margin: 20px 0 0 0;
+    width: 100%;
 }
 
 .current-value {
-    font-style: italic;
+    right: 0;
+    width: auto;
+    padding-inline: 5px;
+    /* color: #fff; */
 }
 
 #controlPanel input {
@@ -229,7 +195,6 @@ button:hover {
     border-radius: 0;
     margin-top: calc((var(--range-thumb-size) / -2) + (var(--range-track-height) / 2));
     cursor: pointer;
-    transition: background 0.2s ease-in-out;
 }
 
 #controlPanel input[type="range"]::-webkit-slider-thumb:hover {
@@ -268,36 +233,9 @@ button:hover {
     text-align: center;
 }
 
-#toggleBtn {
-    width: 50%;
-    margin: 10px 0;
-    padding: 10px;
-    background: var(--bg);
-    color: var(--the-color);
-    border: 1px solid var(--the-color);
-    font-family:  monospace;
-    cursor: pointer;
-}
-
-#toggleBtn:hover {
-    background: var(--the-color);
-    color: #000;
-}
-
 #resetBtn {
     width: 100%;
     margin: 40px 0 10px 0;
-    background: var(--bg);
-    color: var(--the-color);
-    border: 1px solid var(--the-color);
-    padding: 10px;
-    font-family: monospace;
-    cursor: pointer;
-}
-
-#resetBtn:hover {
-    background: var(--the-color);
-    color: #000;
 }
 
 #toggleControls {
@@ -305,9 +243,9 @@ button:hover {
 }
 
 @keyframes blink {
-    0% { background: var(--bg); }
-    50% { background: var(--the-color); }
-    100% { background: var(--bg); }
+    0% { background: var(--bg); color: var(--bg);}
+    50% { background: var(--the-color); color: var(--the-color);}
+    100% { background: var(--bg); color: var(--bg);}
 }
 
 .blinking {
@@ -320,10 +258,10 @@ button:hover {
     border: none;
     padding: 0;
     width: 100%;
-    font-size: inherit;
 }
 
 marquee:hover {
     animation-play-state: paused;
 }
+
 

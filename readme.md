@@ -36,3 +36,8 @@ Great for exploring colors intuitively. Scroll over one of the three regions of 
 ### `ID_twoTabs.jsx`
 InDesign script that inserts two tabs in the highlighted piece of text. First tab goes to the first line, right after the first character, the second tab goes to the beginning of the second line. The outcome somewhat resembles *illuminated initial* from medieval books. Used it for typesetting an interview 
 
+### `compress.sh`
+Bash script that makes use of image magick, that can be installed on Mac OS via `brew install imagemagick`. Will compress with decreasing quality all files inside the directory file is until desired file size is reached. Will also delete original images, so be careful
+
+
+

@@ -1,5 +1,11 @@
 # FFMPEG
 
+## Print every .jpg size dimensions in pixels
+for img in *.jpg; do [ -f "$img" ] && echo -n "$img: " && sips -g pixelHeight -g pixelWidth "$img" | grep pixel | awk '{print $2}' | paste -s -d 'x' -; done 
+
+#### same, but recursively
+find . -type f -name "*.jpg" -print0 | while IFS= read -r -d '' img; do echo -n "$img: " && sips -g pixelHeight -g pixelWidth "$img" | grep pixel | awk '{print $2}' | paste -s -d 'x' -; done
+
 ## Turn `image.jpg` into vertical video with black background
 ```sh
 ffmpeg -framerate 30 -i image%d.jpg -vf "scale=iw:ih,pad=1080:1920:(1080-iw)/2:(1920-ih)/2:black" -c:v libx264 -pix_fmt yuv420p -an output.mp4

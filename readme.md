@@ -39,5 +39,44 @@ InDesign script that inserts two tabs in the highlighted piece of text. First ta
 ### `compress.sh`
 Bash script that makes use of image magick, that can be installed on Mac OS via `brew install imagemagick`. Will compress with decreasing quality all files inside the directory file is until desired file size is reached. Will also delete original images, so be careful
 
+### `image_compressor.py`
+Python script that compresses all images inside its directory, leveraging PIL library.  retains same file name, doesnt change extension or does if you want `.webp` format. 
+
+
+This script compresses images in a specified directory to meet a target file size and optional constraints on dimensions. Outcome is way better than `compress.sh`, supports recursive processing, output file customization, and optional conversion to WebP format.
+
+##### Usage
+
+```bash
+python compress_images.py [options] [directory]
+```
+
+If no directory is specified, the current directory (`.`) is used by default.
+
+#### Options
+
+| Option | Long Option        | Description |
+|--------|--------------------|-------------|
+| `-r`   | `--recursive`      | Process subdirectories recursively. |
+| `-s`   | `--size`           | Maximum file size in **bytes** (default: `MAX_SIZE`). |
+| `-d`   | `--dimension`      | Maximum width or height in **pixels** (default: `MAX_DIMENSION`). |
+| `-p`   | `--prefix`         | Prefix for output files (default: `OUTPUT_PREFIX`). |
+| `-w`   | `--webp`           | Convert images to WebP format (default: `CONVERT_TO_WEBP`). |
+| `-l`   | `--lossless`       | Use **lossless WebP** for PNG images with alpha (default: `WEBP_LOSSLESS`). |
+|        | `--no-webp`        | Disable WebP conversion (overrides `--webp`). |
+
+#### Examples
+
+Compress all images in the current directory to under 500KB:
+
+```bash
+python compress_images.py -s 500000
+```
+
+Compress images in a folder recursively, resize to max 1024x1024, and convert to WebP:
+
+```bash
+python compress_images.py -r -d 1024 -w ./images
+```
 
 

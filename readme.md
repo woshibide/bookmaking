@@ -40,12 +40,10 @@ InDesign script that inserts two tabs in the highlighted piece of text. First ta
 Bash script that makes use of image magick, that can be installed on Mac OS via `brew install imagemagick`. Will compress with decreasing quality all files inside the directory file is until desired file size is reached. Will also delete original images, so be careful
 
 ### `image_compressor.py`
-Python script that compresses all images inside its directory, leveraging PIL library.  retains same file name, doesnt change extension or does if you want `.webp` format. 
+Python script that compresses images in a specified directory to meet a target file size and optional constraints on dimensions. Outcome is way better than `compress.sh`, supports recursive processing, output file customization, and optional conversion to WebP format.
 
-
-This script compresses images in a specified directory to meet a target file size and optional constraints on dimensions. Outcome is way better than `compress.sh`, supports recursive processing, output file customization, and optional conversion to WebP format.
-
-##### Usage
+#### Usage
+Can either be run from specified in the file params or via CLI arguments 
 
 ```bash
 python compress_images.py [options] [directory]

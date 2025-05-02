@@ -11,10 +11,16 @@ OUTPUT_PREFIX = ""  # prefix for output files, empty for overwriting
 MAX_DIMENSION = 1400  # maximum width or height in pixels
 RECURSIVE = True  # whether to process subdirectories
 CONVERT_TO_WEBP = True  # whether to convert images to webp format
-WEBP_LOSSLESS = False  # whether to use lossless compression for webp (for png with alpha)
+WEBP_LOSSLESS = False  # whether to use lossless compression for webp (for webp with alpha)
+DELETE_ORIGINALS = True  # whether to delete original files after successful compression
 
 # list to track unsuccessful compressions
 FAILED_COMPRESSIONS = []
+
+# variables to track space savings
+TOTAL_BYTES_BEFORE = 0
+TOTAL_BYTES_AFTER = 0
+TOTAL_FILES_PROCESSED = 0
 
 def resize_image_if_needed(img, max_dimension=MAX_DIMENSION):
     """resize image proportionally if either dimension exceeds the maximum"""
@@ -46,21 +52,21 @@ def prepare_image(image_path, handle_alpha=True, convert_to_webp=CONVERT_TO_WEBP
         # handle image format conversion
         if convert_to_webp:
             print("  converting to webp format")
-            # for png with alpha channel, we'll preserve the alpha
-            if has_alpha and os.path.splitext(image_path)[1].lower() == '.png':
-                print("  preserving alpha channel for png")
+            # for webp with alpha channel, we'll preserve the alpha
+            if has_alpha and os.path.splitext(image_path)[1].lower() == '.webp':
+                print("  preserving alpha channel for webp")
                 # we're keeping the image as is, just changing the format later
             elif has_alpha and handle_alpha:
                 # for other formats with alpha, convert to RGB if alpha handling is enabled
-                print("  converting RGBA to RGB for non-png output")
+                print("  converting RGBA to RGB for non-webp output")
                 resized_img = resized_img.convert('RGB')
         else:
             # original behavior for non-webp output
             if handle_alpha and resized_img.mode == 'RGBA':
                 output_format = os.path.splitext(image_path)[1].lower()
-                if output_format in ['.jpg', '.jpeg']:
-                    # convert RGBA to RGB for JPEG output
-                    print("  converting RGBA to RGB for JPEG output")
+                if output_format in ['.webp', '.webp']:
+                    # convert RGBA to RGB for webp output
+                    print("  converting RGBA to RGB for webp output")
                     resized_img = resized_img.convert('RGB')
         
         # return a copy of the image to avoid closing issues
@@ -72,11 +78,11 @@ def compress_image(image_path, output_path, quality=99):
     
     # determine output format
     if CONVERT_TO_WEBP:
-        # for webp output with png alpha, use lossless mode
+        # for webp output with webp alpha, use lossless mode
         has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-        is_png = os.path.splitext(image_path)[1].lower() == '.png'
+        is_webp = os.path.splitext(image_path)[1].lower() == '.webp'
         
-        if has_alpha and is_png and WEBP_LOSSLESS:
+        if has_alpha and is_webp and WEBP_LOSSLESS:
             img.save(output_path, format="WEBP", lossless=True)
         else:
             img.save(output_path, format="WEBP", quality=quality)
@@ -87,8 +93,8 @@ def find_optimal_quality(image_path, max_size, min_quality=MIN_QUALITY, max_qual
     """use binary search to find the optimal quality setting"""
     # create a temporary file for testing compression
     suffix = '.webp' if CONVERT_TO_WEBP else os.path.splitext(image_path)[1].lower()
-    if suffix not in ['.jpg', '.jpeg', '.png', '.webp']:
-        suffix = '.jpg'  # default fallback
+    if suffix not in ['.webp', '.webp', '.webp', '.webp']:
+        suffix = '.webp'  # default fallback
     
     # use the prepared image if provided, otherwise prepare it
     img = prepared_img if prepared_img is not None else prepare_image(image_path)
@@ -100,9 +106,9 @@ def find_optimal_quality(image_path, max_size, min_quality=MIN_QUALITY, max_qual
         def compress_only(quality):
             if CONVERT_TO_WEBP:
                 has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-                is_png = os.path.splitext(image_path)[1].lower() == '.png'
+                is_webp = os.path.splitext(image_path)[1].lower() == '.webp'
                 
-                if has_alpha and is_png and WEBP_LOSSLESS:
+                if has_alpha and is_webp and WEBP_LOSSLESS:
                     img.save(temp_filename, format="WEBP", lossless=True)
                 else:
                     img.save(temp_filename, format="WEBP", quality=quality)
@@ -156,9 +162,9 @@ def compress_with_optimal_quality(image_path, output_path, max_size):
             output_path = base + '.webp'
             
         has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-        is_png = os.path.splitext(image_path)[1].lower() == '.png'
+        is_webp = os.path.splitext(image_path)[1].lower() == '.webp'
         
-        if has_alpha and is_png and WEBP_LOSSLESS:
+        if has_alpha and is_webp and WEBP_LOSSLESS:
             img.save(output_path, format="WEBP", lossless=True)
         else:
             img.save(output_path, format="WEBP", quality=optimal_quality)
@@ -192,9 +198,9 @@ def brute_force_compress(image_path, output_path, max_size):
     for quality in [10, 5, 1]:
         if CONVERT_TO_WEBP:
             has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-            is_png = os.path.splitext(image_path)[1].lower() == '.png'
+            is_webp = os.path.splitext(image_path)[1].lower() == '.webp'
             
-            if has_alpha and is_png and WEBP_LOSSLESS:
+            if has_alpha and is_webp and WEBP_LOSSLESS:
                 img.save(output_path, format="WEBP", lossless=True)
             else:
                 img.save(output_path, format="WEBP", quality=quality)
@@ -225,9 +231,9 @@ def brute_force_compress(image_path, output_path, max_size):
         # try minimum quality
         if CONVERT_TO_WEBP:
             has_alpha = current_img.mode == 'RGBA' or current_img.mode == 'LA'
-            is_png = os.path.splitext(image_path)[1].lower() == '.png'
+            is_webp = os.path.splitext(image_path)[1].lower() == '.webp'
             
-            if has_alpha and is_png and WEBP_LOSSLESS:
+            if has_alpha and is_webp and WEBP_LOSSLESS:
                 current_img.save(output_path, format="WEBP", lossless=True)
             else:
                 current_img.save(output_path, format="WEBP", quality=1)
@@ -254,9 +260,9 @@ def convert_to_webp_format(image_path, output_path, quality=99):
             output_path = base + '.webp'
         
         has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-        is_png = os.path.splitext(image_path)[1].lower() == '.png'
+        is_webp = os.path.splitext(image_path)[1].lower() == '.webp'
         
-        if has_alpha and is_png and WEBP_LOSSLESS:
+        if has_alpha and is_webp and WEBP_LOSSLESS:
             img.save(output_path, format="WEBP", lossless=True)
         else:
             img.save(output_path, format="WEBP", quality=quality)
@@ -270,16 +276,19 @@ def convert_to_webp_format(image_path, output_path, quality=99):
 def process_directory(directory, recursive=RECURSIVE):
     """process all images in directory, optionally recursively"""
     count = 0
+    global TOTAL_BYTES_BEFORE, TOTAL_BYTES_AFTER, TOTAL_FILES_PROCESSED
     
     try:
         # check if the path exists and is accessible
         entries = os.listdir(directory)
+        print(f"Scanning directory: {directory}")
     except (PermissionError, FileNotFoundError) as e:
         print(f"error accessing directory {directory}: {e}")
         return count
         
     for item in entries:
         item_path = os.path.join(directory, item)
+        print(f"  Found: {item_path}")
         
         # skip hidden files/directories (starting with .)
         if item.startswith('.'):
@@ -292,7 +301,8 @@ def process_directory(directory, recursive=RECURSIVE):
             continue
             
         # process image files
-        if os.path.isfile(item_path) and item.lower().endswith(('.png', '.jpg', '.jpeg')):
+        if os.path.isfile(item_path) and item.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+            print(f"--> Processing image file: {item_path}")
             try:
                 size = os.path.getsize(item_path)
                 base_filename, ext = os.path.splitext(item)
@@ -307,8 +317,21 @@ def process_directory(directory, recursive=RECURSIVE):
                         
                     success = compress_with_optimal_quality(item_path, output_filename, MAX_SIZE)
                     count += 1
+                    TOTAL_FILES_PROCESSED += 1
+                    TOTAL_BYTES_BEFORE += size
                     
-                    if not success:
+                    if success:
+                        new_size = os.path.getsize(output_filename)
+                        TOTAL_BYTES_AFTER += new_size
+                        
+                        # delete original if enabled and compression was successful
+                        if DELETE_ORIGINALS:
+                            try:
+                                os.remove(item_path)
+                                print(f"  deleted original file: {item_path}")
+                            except Exception as e:
+                                print(f"  error deleting original file: {e}")
+                    else:
                         # add to failed compressions list
                         FAILED_COMPRESSIONS.append((item_path, output_filename))
                 else:
@@ -316,8 +339,22 @@ def process_directory(directory, recursive=RECURSIVE):
                     if CONVERT_TO_WEBP:
                         print(f"converting {item_path} to webp (size: {size} bytes, below threshold)")
                         output_filename = os.path.join(directory, f"{OUTPUT_PREFIX}{base_filename}.webp")
-                        convert_to_webp_format(item_path, output_filename)
+                        success = convert_to_webp_format(item_path, output_filename)
                         count += 1
+                        TOTAL_FILES_PROCESSED += 1
+                        TOTAL_BYTES_BEFORE += size
+                        
+                        if success:
+                            new_size = os.path.getsize(output_filename)
+                            TOTAL_BYTES_AFTER += new_size
+                            
+                            # delete original if enabled and conversion was successful
+                            if DELETE_ORIGINALS:
+                                try:
+                                    os.remove(item_path)
+                                    print(f"  deleted original file: {item_path}")
+                                except Exception as e:
+                                    print(f"  error deleting original file: {e}")
                     else:
                         print(f"skipping {item_path} (size: {size} bytes, below threshold)")
             except Exception as e:
@@ -327,6 +364,8 @@ def process_directory(directory, recursive=RECURSIVE):
 
 def process_failed_compressions():
     """process images where standard compression failed"""
+    global TOTAL_BYTES_AFTER
+    
     if not FAILED_COMPRESSIONS:
         return
         
@@ -349,6 +388,15 @@ def process_failed_compressions():
             print(f"brute forcing {image_path}...")
             if brute_force_compress(image_path, output_path, MAX_SIZE):
                 success_count += 1
+                TOTAL_BYTES_AFTER += os.path.getsize(output_path)
+                
+                # delete original if enabled and brute force was successful
+                if DELETE_ORIGINALS:
+                    try:
+                        os.remove(image_path)
+                        print(f"  deleted original file: {image_path}")
+                    except Exception as e:
+                        print(f"  error deleting original file: {e}")
             else:
                 still_failed.append(image_path)
                 
@@ -361,6 +409,17 @@ def process_failed_compressions():
     else:
         print("brute force compression skipped")
 
+def format_bytes(size_bytes):
+    """format bytes into a human readable format"""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024**2:
+        return f"{size_bytes/1024:.2f} KB"
+    elif size_bytes < 1024**3:
+        return f"{size_bytes/1024**2:.2f} MB"
+    else:
+        return f"{size_bytes/1024**3:.2f} GB"
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="compress images to target file size")
     parser.add_argument("-r", "--recursive", action="store_true", help="process subdirectories recursively")
@@ -368,8 +427,10 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dimension", type=int, default=MAX_DIMENSION, help="maximum width/height in pixels")
     parser.add_argument("-p", "--prefix", default=OUTPUT_PREFIX, help="prefix for output files")
     parser.add_argument("-w", "--webp", action="store_true", default=CONVERT_TO_WEBP, help="convert images to webp format")
-    parser.add_argument("-l", "--lossless", action="store_true", default=WEBP_LOSSLESS, help="use lossless webp for PNG images with alpha")
+    parser.add_argument("-l", "--lossless", action="store_true", default=WEBP_LOSSLESS, help="use lossless webp for webp images with alpha")
     parser.add_argument("--no-webp", action="store_false", dest="webp", help="disable webp conversion")
+    parser.add_argument("--delete-originals", action="store_true", default=DELETE_ORIGINALS, help="delete original files after successful compression")
+    parser.add_argument("--keep-originals", action="store_false", dest="delete_originals", help="keep original files after compression")
     parser.add_argument("directory", nargs="?", default=".", help="directory to process (default: current directory)")
     args = parser.parse_args()
     
@@ -380,6 +441,7 @@ if __name__ == "__main__":
     RECURSIVE = args.recursive or RECURSIVE
     CONVERT_TO_WEBP = args.webp
     WEBP_LOSSLESS = args.lossless
+    DELETE_ORIGINALS = args.delete_originals
     
     print(f"starting with settings:")
     print(f"  max file size: {MAX_SIZE} bytes")
@@ -387,15 +449,25 @@ if __name__ == "__main__":
     print(f"  recursive: {'yes' if RECURSIVE else 'no'}")
     print(f"  output prefix: '{OUTPUT_PREFIX}'")
     print(f"  convert to webp: {'yes' if CONVERT_TO_WEBP else 'no'}")
-    print(f"  lossless webp for png with alpha: {'yes' if WEBP_LOSSLESS else 'no'}")
+    print(f"  lossless webp for webp with alpha: {'yes' if WEBP_LOSSLESS else 'no'}")
+    print(f"  delete originals: {'yes' if DELETE_ORIGINALS else 'no'}")
     print(f"  directory: {args.directory}")
     
     # process the specified directory
     processed = process_directory(args.directory, RECURSIVE)
-    print(f"compression completed. {processed} files processed.")
+    
+    # calculate space savings
+    bytes_saved = TOTAL_BYTES_BEFORE - TOTAL_BYTES_AFTER
+    percent_saved = 0 if TOTAL_BYTES_BEFORE == 0 else (bytes_saved / TOTAL_BYTES_BEFORE) * 100
+    
+    print(f"\ncompression completed. {processed} files processed.")
+    print(f"space usage statistics:")
+    print(f"  total files processed: {TOTAL_FILES_PROCESSED}")
+    print(f"  original size: {format_bytes(TOTAL_BYTES_BEFORE)} ({TOTAL_BYTES_BEFORE:,} bytes)")
+    print(f"  compressed size: {format_bytes(TOTAL_BYTES_AFTER)} ({TOTAL_BYTES_AFTER:,} bytes)")
+    print(f"  space saved: {format_bytes(bytes_saved)} ({bytes_saved:,} bytes), {percent_saved:.2f}% reduction")
     
     # handle failed compressions
     process_failed_compressions()
-
 
 

@@ -5,6 +5,7 @@ import tiktoken
 import os
 import time
 import random
+import argparse  # import argparse module
 
 client = OpenAI(api_key=key)
 
@@ -38,20 +39,18 @@ def create_chunks(text, n, tokenizer):
         i = j  # Move to the next position
 
 # Extract chunk with improved error handling and rate limiting
-def extract_chunk(chunk, template_prompt):
-    max_retries = 5
-    base_delay = 1  # Base delay in seconds
+def extract_chunk(chunk, template_prompt, model_name="gpt-4o-mini", max_retries=5, base_delay=1):
+    # base_delay is in seconds
     
     for attempt in range(max_retries):
         try:
             prompt = template_prompt.replace("<document>", chunk)
             messages = [
-                {"role": "system", "content": "You help reformat text into structured LaTeX format."},
+                {"role": "system", "content": "You are an expert technical editor specializing in converting interview transcripts into flawlessly formatted LaTeX documents adhering to the Chicago Manual of Style. Your task is to meticulously apply speaker tags, paragraph breaks, correct punctuation, and identify and italicize key phrases, ensuring the output is ready for typesetting."},
                 {"role": "user", "content": prompt}
             ]
             response = client.chat.completions.create(
-                # model="gpt-3.5-turbo",
-                model="gpt-4o-mini",
+                model=model_name,
                 messages=messages,
                 temperature=0,
                 max_tokens=1500,
@@ -74,13 +73,12 @@ def extract_chunk(chunk, template_prompt):
                 time.sleep(1)
     
     # If all retries fail
-    return f"% Error processing chunk after {max_retries} attempts"
-
-
+    logging.error(f"Failed to process chunk after {max_retries} attempts")
+    return None
 
 # Template prompt for AI
 template_prompt = """
-The following text is a raw transcript of an interview, where two women (Lee Davidson and Joni Blank) are being interviewed by another woman (Susanne Snyder). Format it in LaTeX syntax. Add speaker identifiers (e.g., \\textbf{Susanne Snyder}, \\textbf{Joni Blank}, \\textbf{Lee Davidson}), insert paragraph breaks, punctuation symbols, italicize whats important, make footnotes, make sure text is ready to typeset, and fix incoherent sentences. Ensure the LaTeX output is clean, follows the Chicago Manual of Style and ready to be typesetted. Here is the text:
+The following text is a raw transcript of an interview, where man called Leonid is being interviewed by another man Pyotr. Format it in LaTeX syntax. Add speaker identifiers (e.g., \\textbf{Pyotr}, \\textbf{Leonid}), insert paragraph breaks, punctuation symbols, italicize whats important, make sure text is ready to typeset, and fix incoherent sentences. Ensure the LaTeX output is clean, follows the Chicago Manual of Style and ready to be typesetted. Here is the text:
 <document>
 """
 
@@ -105,8 +103,12 @@ def main(input_file, output_file):
     results = []
     for idx, chunk in enumerate(chunks):
         logging.info(f"Processing chunk {idx + 1}/{len(chunks)}...")
-        result = extract_chunk(chunk, template_prompt)
-        results.append(result)
+        result = extract_chunk(chunk, template_prompt)  # Using default values for model_name, max_retries, base_delay
+        if result is None:
+            logging.warning(f"Chunk {idx + 1}/{len(chunks)} failed to process.")
+            results.append("% Error processing this chunk")  # Placeholder for failed chunk
+        else:
+            results.append(result)
 
         # Save intermediate results to avoid data loss
         temp_output = "\n\n".join(results)
@@ -118,6 +120,15 @@ def main(input_file, output_file):
 
 
 if __name__ == "__main__":
-    input_file = "text.txt"  # Input raw transcript
-    output_file = "formatted_output.tex"  # Output file in LaTeX syntax
-    main(input_file, output_file)
+    parser = argparse.ArgumentParser(description="format a raw transcript into latex syntax.")
+    parser.add_argument("input_file", help="path to the input raw transcript file.")
+    parser.add_argument("-o", "--output_file", help="path to the output latex file.")
+
+    args = parser.parse_args()
+
+    output_file = args.output_file
+    if not output_file:
+        base_name, _ = os.path.splitext(args.input_file)
+        output_file = base_name + ".tex"
+
+    main(args.input_file, output_file)

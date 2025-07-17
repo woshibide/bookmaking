@@ -87,5 +87,8 @@ Compress images in a folder recursively, resize to max 1024x1024, and convert to
 ```bash
 python compress_images.py -r -d 1024 -w ./images
 ```
+---
+### `translator.py`
+expects html syntax on input (either .txt or .html), so that it will extract from <p>[...]</p> and feed to google translate api 
 
 

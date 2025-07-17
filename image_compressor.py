@@ -8,7 +8,7 @@ MAX_SIZE = 200000       # maximum file size in bytes
 INITIAL_QUALITY = 99    # starting quality for compression
 MIN_QUALITY = 1         # minimum quality to try
 OUTPUT_PREFIX = ""      # prefix for output files, empty for overwriting
-MAX_DIMENSION = 1400    # maximum width or height in pixels
+MAX_DIMENSION = 1920    # maximum width or height in pixels
 RECURSIVE = True        # whether to process subdirectories
 CONVERT_TO_WEBP = True  # whether to convert images to webp format
 WEBP_LOSSLESS = False   # whether to use lossless compression for webp (for png with alpha)
@@ -52,13 +52,13 @@ def prepare_image(image_path, handle_alpha=True, convert_to_webp=CONVERT_TO_WEBP
         # handle image format conversion
         if convert_to_webp:
             print("  converting to webp format")
-            # for png with alpha channel, we'll preserve the alpha
-            if has_alpha and os.path.splitext(image_path)[1].lower() == '.png':
-                print("  preserving alpha channel for png")
+            # for png/tiff with alpha channel, we'll preserve the alpha
+            if has_alpha and os.path.splitext(image_path)[1].lower() in ['.png', '.tif', '.tiff']:
+                print("  preserving alpha channel for png/tiff")
                 # we're keeping the image as is, just changing the format later
             elif has_alpha and handle_alpha:
                 # for other formats with alpha, convert to RGB if alpha handling is enabled
-                print("  converting RGBA to RGB for non-png output")
+                print("  converting RGBA to RGB for non-png/tiff output")
                 resized_img = resized_img.convert('RGB')
         else:
             # original behavior for non-webp output
@@ -78,11 +78,11 @@ def compress_image(image_path, output_path, quality=99):
     
     # determine output format
     if CONVERT_TO_WEBP:
-        # for webp output with png alpha, use lossless mode
+        # for webp output with png/tiff alpha, use lossless mode
         has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-        is_png = os.path.splitext(image_path)[1].lower() == '.png'
+        is_png_or_tiff = os.path.splitext(image_path)[1].lower() in ['.png', '.tif', '.tiff']
         
-        if has_alpha and is_png and WEBP_LOSSLESS:
+        if has_alpha and is_png_or_tiff and WEBP_LOSSLESS:
             img.save(output_path, format="WEBP", lossless=True)
         else:
             img.save(output_path, format="WEBP", quality=quality)
@@ -93,7 +93,7 @@ def find_optimal_quality(image_path, max_size, min_quality=MIN_QUALITY, max_qual
     """use binary search to find the optimal quality setting"""
     # create a temporary file for testing compression
     suffix = '.webp' if CONVERT_TO_WEBP else os.path.splitext(image_path)[1].lower()
-    if suffix not in ['.jpg', '.jpeg', '.png', '.webp']:
+    if suffix not in ['.jpg', '.jpeg', '.png', '.webp', '.tif', '.tiff']:
         suffix = '.jpg'  # default fallback
     
     # use the prepared image if provided, otherwise prepare it
@@ -106,9 +106,9 @@ def find_optimal_quality(image_path, max_size, min_quality=MIN_QUALITY, max_qual
         def compress_only(quality):
             if CONVERT_TO_WEBP:
                 has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-                is_png = os.path.splitext(image_path)[1].lower() == '.png'
+                is_png_or_tiff = os.path.splitext(image_path)[1].lower() in ['.png', '.tif', '.tiff']
                 
-                if has_alpha and is_png and WEBP_LOSSLESS:
+                if has_alpha and is_png_or_tiff and WEBP_LOSSLESS:
                     img.save(temp_filename, format="WEBP", lossless=True)
                 else:
                     img.save(temp_filename, format="WEBP", quality=quality)
@@ -162,9 +162,9 @@ def compress_with_optimal_quality(image_path, output_path, max_size):
             output_path = base + '.webp'
             
         has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-        is_png = os.path.splitext(image_path)[1].lower() == '.png'
+        is_png_or_tiff = os.path.splitext(image_path)[1].lower() in ['.png', '.tif', '.tiff']
         
-        if has_alpha and is_png and WEBP_LOSSLESS:
+        if has_alpha and is_png_or_tiff and WEBP_LOSSLESS:
             img.save(output_path, format="WEBP", lossless=True)
         else:
             img.save(output_path, format="WEBP", quality=optimal_quality)
@@ -198,9 +198,9 @@ def brute_force_compress(image_path, output_path, max_size):
     for quality in [10, 5, 1]:
         if CONVERT_TO_WEBP:
             has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-            is_png = os.path.splitext(image_path)[1].lower() == '.png'
+            is_png_or_tiff = os.path.splitext(image_path)[1].lower() in ['.png', '.tif', '.tiff']
             
-            if has_alpha and is_png and WEBP_LOSSLESS:
+            if has_alpha and is_png_or_tiff and WEBP_LOSSLESS:
                 img.save(output_path, format="WEBP", lossless=True)
             else:
                 img.save(output_path, format="WEBP", quality=quality)
@@ -231,9 +231,9 @@ def brute_force_compress(image_path, output_path, max_size):
         # try minimum quality
         if CONVERT_TO_WEBP:
             has_alpha = current_img.mode == 'RGBA' or current_img.mode == 'LA'
-            is_png = os.path.splitext(image_path)[1].lower() == '.png'
+            is_png_or_tiff = os.path.splitext(image_path)[1].lower() in ['.png', '.tif', '.tiff']
             
-            if has_alpha and is_png and WEBP_LOSSLESS:
+            if has_alpha and is_png_or_tiff and WEBP_LOSSLESS:
                 current_img.save(output_path, format="WEBP", lossless=True)
             else:
                 current_img.save(output_path, format="WEBP", quality=1)
@@ -260,9 +260,9 @@ def convert_to_webp_format(image_path, output_path, quality=99):
             output_path = base + '.webp'
         
         has_alpha = img.mode == 'RGBA' or img.mode == 'LA'
-        is_png = os.path.splitext(image_path)[1].lower() == '.png'
+        is_png_or_tiff = os.path.splitext(image_path)[1].lower() in ['.png', '.tif', '.tiff']
         
-        if has_alpha and is_png and WEBP_LOSSLESS:
+        if has_alpha and is_png_or_tiff and WEBP_LOSSLESS:
             img.save(output_path, format="WEBP", lossless=True)
         else:
             img.save(output_path, format="WEBP", quality=quality)
@@ -299,7 +299,7 @@ def process_directory(directory, recursive=RECURSIVE):
             continue
             
         # process image file formats
-        if os.path.isfile(item_path) and item.lower().endswith(('.png', '.jpg', '.jpeg')):
+        if os.path.isfile(item_path) and item.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff')):
             try:
                 size = os.path.getsize(item_path)
                 base_filename, ext = os.path.splitext(item)
@@ -468,5 +468,6 @@ if __name__ == "__main__":
     
     # handle failed compressions
     process_failed_compressions()
+
 
 

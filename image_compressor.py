@@ -2,17 +2,20 @@ import os
 import tempfile
 import argparse
 from PIL import Image
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 
 # config
-MAX_SIZE = 200000       # maximum file size in bytes
+MAX_SIZE = 1000000       # maximum file size in bytes
 INITIAL_QUALITY = 99    # starting quality for compression
 MIN_QUALITY = 1         # minimum quality to try
 OUTPUT_PREFIX = ""      # prefix for output files, empty for overwriting
 MAX_DIMENSION = 1920    # maximum width or height in pixels
 RECURSIVE = True        # whether to process subdirectories
-CONVERT_TO_WEBP = True  # whether to convert images to webp format
 WEBP_LOSSLESS = False   # whether to use lossless compression for webp (for png with alpha)
-DELETE_ORIGINALS = True # whether to delete original files after successful compression
+CONVERT_TO_WEBP = True  # whether to convert images to webp format
+DELETE_ORIGINALS = False # whether to delete original files after successful compression
 
 # list to track unsuccessful compressions
 FAILED_COMPRESSIONS = []
@@ -93,7 +96,7 @@ def find_optimal_quality(image_path, max_size, min_quality=MIN_QUALITY, max_qual
     """use binary search to find the optimal quality setting"""
     # create a temporary file for testing compression
     suffix = '.webp' if CONVERT_TO_WEBP else os.path.splitext(image_path)[1].lower()
-    if suffix not in ['.jpg', '.jpeg', '.png', '.webp', '.tif', '.tiff']:
+    if suffix not in ['.jpg', '.jpeg', '.png', '.webp', '.tif', '.tiff', '.heic']:
         suffix = '.jpg'  # default fallback
     
     # use the prepared image if provided, otherwise prepare it
@@ -299,7 +302,7 @@ def process_directory(directory, recursive=RECURSIVE):
             continue
             
         # process image file formats
-        if os.path.isfile(item_path) and item.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff')):
+        if os.path.isfile(item_path) and item.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff', '.heic')):
             try:
                 size = os.path.getsize(item_path)
                 base_filename, ext = os.path.splitext(item)
@@ -468,6 +471,7 @@ if __name__ == "__main__":
     
     # handle failed compressions
     process_failed_compressions()
+
 
 
 
